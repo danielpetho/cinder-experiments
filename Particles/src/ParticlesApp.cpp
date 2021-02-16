@@ -77,8 +77,6 @@ void prepareSettings(ParticlesApp::Settings *settings)
 void ParticlesApp::setup()
 {
 
-	
-
 	mPerlin.setSeed(clock());
 	mParticles.reserve(NUM_PARTICLES);
 
