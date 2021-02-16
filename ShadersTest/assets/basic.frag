@@ -2,7 +2,6 @@
 
 uniform float		uCheckSize;
 uniform float		u_time;
-
 in vec2				TexCoord0;
 out vec4			oColor;
 

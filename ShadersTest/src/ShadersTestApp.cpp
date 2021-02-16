@@ -50,8 +50,7 @@ void ShadersTestApp::draw()
 	console() << getElapsedFrames() << std::endl;
 
 	uint32_t d = getElapsedFrames();
-	float f = *(float*)&d;
-	mGlsl->uniform("u_time", f);
+	mGlsl->uniform("u_time", (float)d);
 	mRect->draw();
 }
 
