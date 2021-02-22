@@ -1,0 +1,85 @@
+#version 420 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+#extension GL_ARB_compute_variable_group_size : enable
+
+uniform float	uTime;
+#define M_PI	3.1415926535897932384626433832795
+
+// 2D Random
+float random (in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(11.9898,78.233)))
+                 * 437358.5453123);
+}
+
+
+// https://www.shadertoy.com/view/4dS3Wd
+float noise (in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    // vec2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+	// Quintic interpolation curve
+	vec2 u = f*f*f*(f*(f*6.-15.)+10.);
+
+    // Mix 4 coorners percentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+float map(float value, float inMin, float inMax, float outMin, float outMax) {
+  return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+}
+
+struct Particle
+{
+	vec3	pos;
+	vec3	vel;
+	vec3	acc;
+	vec4	color;
+	float	damping;
+};
+
+layout( std140, binding = 0 ) buffer Part
+{
+    Particle particles[];
+};
+
+//layout( local_size_variable ) in;
+layout( local_size_x = 128, local_size_y = 1, local_size_z = 1 ) in;
+
+
+void main()
+{
+  uint gid = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
+
+  vec3 position =   particles[gid].pos;
+  vec3 vel =		particles[gid].vel;
+  vec3 acc =		particles[gid].acc;
+  float damping =   particles[gid].damping;
+  vec4 color =      particles[gid].color;
+
+  
+  float n = noise(vec2(position.x, position.y) / 300.0 + uTime / 100.0) * 5.0;
+
+  float angle = map(n, 0.0, 1.0, (-M_PI / 2), (M_PI / 2));
+  
+  // iranyvektor szogbol
+  vec3 noiseVec = vec3(cos(angle), sin(angle), 0.0) * 0.005;
+  particles[gid].vel = vel + noiseVec;
+  particles[gid].pos = position + vel + noiseVec;
+
+}
