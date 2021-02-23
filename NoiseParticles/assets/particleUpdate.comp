@@ -7,10 +7,14 @@ uniform float	uTime;
 #define M_PI	3.1415926535897932384626433832795
 
 // 2D Random
-float random (in vec2 st) {
-    return fract(sin(dot(st.xy,
-                         vec2(11.9898,78.233)))
-                 * 437358.5453123);
+float rand2D(in vec2 co){
+    return fract(sin(dot(co.xy ,vec2(2.9898,78.233))) * 43758.5453);
+}
+
+
+// 3d Random
+float rand3D(in vec3 co){
+    return fract(sin(dot(co.xyz ,vec3(12.9898,78.233,104.7272))) * 43758.5453);
 }
 
 
@@ -20,10 +24,10 @@ float noise (in vec2 st) {
     vec2 f = fract(st);
 
     // Four corners in 2D of a tile
-    float a = random(i);
-    float b = random(i + vec2(1.0, 0.0));
-    float c = random(i + vec2(0.0, 1.0));
-    float d = random(i + vec2(1.0, 1.0));
+    float a = rand2D(i);
+    float b = rand2D(i + vec2(1.0, 0.0));
+    float c = rand2D(i + vec2(0.0, 1.0));
+    float d = rand2D(i + vec2(1.0, 1.0));
 
     // Smooth Interpolation
 
@@ -40,6 +44,51 @@ float noise (in vec2 st) {
             (d - b) * u.x * u.y;
 }
 
+float simple_interpolate(in float a, in float b, in float x)
+{	
+	float u =  x*x*x*(x*(x*6.-15.)+10.);
+	return a + smoothstep(0.0,1.0,u) * (b-a);
+
+}
+
+float interpolatedNoise3D(in float x, in float y, in float z)
+{
+    float integer_x = x - fract(x);
+    float fractional_x = x - integer_x;
+
+    float integer_y = y - fract(y);
+    float fractional_y = y - integer_y;
+
+    float integer_z = z - fract(z);
+    float fractional_z = z - integer_z;
+
+    float v1 = rand3D(vec3(integer_x, integer_y, integer_z));
+    float v2 = rand3D(vec3(integer_x+1.0, integer_y, integer_z));
+    float v3 = rand3D(vec3(integer_x, integer_y+1.0, integer_z));
+    float v4 = rand3D(vec3(integer_x+1.0, integer_y +1.0, integer_z));
+
+    float v5 = rand3D(vec3(integer_x, integer_y, integer_z+1.0));
+    float v6 = rand3D(vec3(integer_x+1.0, integer_y, integer_z+1.0));
+    float v7 = rand3D(vec3(integer_x, integer_y+1.0, integer_z+1.0));
+    float v8 = rand3D(vec3(integer_x+1.0, integer_y +1.0, integer_z+1.0));
+
+    float i1 = simple_interpolate(v1,v5, fractional_z);
+    float i2 = simple_interpolate(v2,v6, fractional_z);
+    float i3 = simple_interpolate(v3,v7, fractional_z);
+    float i4 = simple_interpolate(v4,v8, fractional_z);
+
+    float ii1 = simple_interpolate(i1,i2,fractional_x);
+    float ii2 = simple_interpolate(i3,i4,fractional_x);
+
+    return simple_interpolate(ii1 , ii2 , fractional_y);
+}
+
+float noise3D(in vec3 coord, in float wavelength)
+{
+   return interpolatedNoise3D(coord.x/wavelength, coord.y/wavelength, coord.z/wavelength);
+}
+
+
 float map(float value, float inMin, float inMax, float outMin, float outMax) {
   return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
 }
@@ -48,7 +97,7 @@ struct Particle
 {
 	vec3	pos;
 	vec3	vel;
-	vec3	acc;
+	vec3	home; 
 	vec4	color;
 	float	damping;
 };
@@ -68,18 +117,32 @@ void main()
 
   vec3 position =   particles[gid].pos;
   vec3 vel =		particles[gid].vel;
-  vec3 acc =		particles[gid].acc;
+  vec3 home =		particles[gid].home;
   float damping =   particles[gid].damping;
   vec4 color =      particles[gid].color;
 
   
-  float n = noise(vec2(position.x, position.y) / 300.0 + uTime / 100.0) * 5.0;
+  float aN = noise3D((vec3(position.x, position.y, position.z) / 5000.0 + uTime / 3000.0), 0.5) * 5.0;
 
-  float angle = map(n, 0.0, 1.0, (-M_PI / 2), (M_PI / 2));
+  float alpha = map(aN, 0.0, 1.0, (-M_PI / 2), (+M_PI / 2));
   
-  // iranyvektor szogbol
-  vec3 noiseVec = vec3(cos(angle), sin(angle), 0.0) * 0.005;
-  particles[gid].vel = vel + noiseVec;
-  particles[gid].pos = position + vel + noiseVec;
+  vec3 noiseVec = vec3(cos(alpha) * cos(alpha), sin(alpha), sin(alpha) * cos(alpha)) * 1.0;
+  float velX = clamp(vel.x + noiseVec.x, -damping, damping);
+  float velY = clamp(vel.y + noiseVec.y, -damping, damping);
+  float velZ = clamp(vel.z + noiseVec.z, -damping, damping);
+
+  particles[gid].vel = vec3(velX, velY, velZ);
+
+  vec3 newPos = position + vec3(velX, velY, velZ);
+
+  if (newPos.x < -1000) newPos.x = 1000;
+  if (newPos.x > 1000) newPos.x = -1000;
+  if (newPos.y < -1000) newPos.y = 1000;
+  if (newPos.y > 1000) newPos.y = -1000;
+  if (newPos.z < -1000) newPos.z = 1000;
+  if (newPos.z > 1000) newPos.z = -1000;
+
+
+  particles[gid].pos = newPos;
 
 }

@@ -5,6 +5,7 @@
 #include "cinder/gl/Fbo.h"
 #include "cinder/Utilities.h"
 #include "cinder/Rand.h"
+#include "cinder/Arcball.h" 
 #include "cinder/gl/Ssbo.h"
 
 using namespace ci;
@@ -22,7 +23,7 @@ struct Particle
 	float   pad1;
 	vec3	vel;
 	float   pad2;
-	vec3	acc;
+	vec3	home;
 	float	pad3;
 	vec4    color;
 	float	damping;
@@ -37,11 +38,14 @@ public:
 
 	void setup() override;
 	void mouseDown(MouseEvent event) override;
+	void mouseDrag(MouseEvent event) override;
 	void keyDown(KeyEvent event) override;
 	void update() override;
 	void draw() override;
 
 	CameraPersp		mCam;
+	Arcball			mArcball;
+	Sphere			mSphere;
 
 	gl::FboRef		mOffScreenFbo;
 	unsigned int		mCurrentFrame;
@@ -50,8 +54,8 @@ public:
 	unsigned int	mPosterId = 185;
 
 	// off screen buffer resolution
-	unsigned int	mWidth = 1920 / 2;
-	unsigned int	mHeight = 1080 / 2;
+	unsigned int	mWidth = 1920;
+	unsigned int	mHeight = 1080;
 	float			mScale = 1;
 
 	// screen resolution
@@ -80,7 +84,7 @@ private:
 	gl::VboRef mIdsVbo;
 	gl::VaoRef mAttributes;
 
-	const int NUM_PARTICLES = static_cast<int>(100e3);
+	const int NUM_PARTICLES = static_cast<int>(5 * 1e5);
 };
 
 void NoiseParticlesApp::setup()
@@ -94,19 +98,24 @@ void NoiseParticlesApp::setup()
 	particles.assign(NUM_PARTICLES, Particle());
 
 	vec3 center = vec3(mWidth / 2, mHeight / 2, 0.0);
+	mCam.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 10000.0f);
+	mCam.lookAt(vec3(1100, 0, 4000), vec3(0));
+	mSphere = Sphere(vec3(0), 1000);
+
+	mArcball = Arcball(&mCam, mSphere);
 	for (unsigned int i = 0; i < particles.size(); ++i)
 	{
 		auto &p = particles.at(i);
-		float x = Rand::randFloat(center.x - 500, center.x + 500);
-		float y = Rand::randFloat(center.y - 500, center.y + 500);
-		float z = Rand::randFloat(center.z - 500, center.z + 500);
+		float x = Rand::randFloat(-1000, 1000);
+		float y = Rand::randFloat(-1000, 1000);
+		float z = Rand::randFloat(-1000, 1000);
 
-		p.pos = vec3(x, y, 0);
+		p.pos = vec3(x, y, z);
 		p.vel = vec3(0.0, 0.0, 0.0); // random initial velocity
-
-		p.damping = Rand::randFloat(0.965f, 0.985f);
-		Color c(CM_HSV, 0.5f, 1.0f, 1.0f);
-		p.color = vec4(c.r, c.g, c.b, 1.0f);
+		p.home = p.pos;
+		p.damping = Rand::randFloat(1.0f, 3.0f);
+		ColorA c(CM_HSV, 0.5f, 1.0f, 1.0f, 0.1f);
+		p.color = vec4(c.r, c.g, c.b, 0.01f);
 	}
 
 	ivec3 count = gl::getMaxComputeWorkGroupCount();
@@ -178,6 +187,12 @@ void NoiseParticlesApp::keyDown(KeyEvent event)
 
 void NoiseParticlesApp::mouseDown( MouseEvent event )
 {
+	mArcball.mouseDown(event);
+}
+
+void NoiseParticlesApp::mouseDrag(MouseEvent event)
+{
+	mArcball.mouseDrag(event);
 }
 
 void NoiseParticlesApp::update()
@@ -195,7 +210,8 @@ void NoiseParticlesApp::update()
 void NoiseParticlesApp::draw()
 {
 
-	gl::clear(Color(0, 0, 0));
+	gl::enableAlphaBlending();
+	gl::clear(ColorA(0, 0, 0, 10));
 	gl::ScopedViewport viewport(vec2(0), mOffScreenFbo->getSize());
 
 	//gl::setMatricesWindowPersp(getWindowSize());
@@ -210,10 +226,14 @@ void NoiseParticlesApp::draw()
 
 	gl::context()->setDefaultShaderVars();
 
+	gl::pointSize(2.5);
 	gl::drawArrays(GL_POINTS, 0, NUM_PARTICLES);
 
-	gl::setMatricesWindow(app::getWindowSize());
-	gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(32.0f, 52.0f));
+	//gl::setMatricesWindow(app::getWindowSize());
+	//mCam.lookAt(vec3(mWidth / 2, mHeight / 2 + sin((float)mCurrentFrame / 100) * 100, 1500), vec3(mWidth / 2, mHeight / 2, 0));
+	gl::setMatrices(mCam);
+	gl::rotate(mArcball.getQuat());
+	//gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(32.0f, 52.0f));
 
 
 	if (mRender && mRenderedFrame < mEndFrame)

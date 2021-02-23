@@ -8,7 +8,7 @@ struct Particle
 {
 	vec3	pos;
 	vec3	vel;
-	vec3	acc;
+	vec3	home;
 	vec4	color;
 	float	damping;
 };
@@ -19,6 +19,7 @@ layout( std140, binding = 0 ) buffer Part
 };
 
 uniform mat4 ciModelViewProjection;
+
 
 
 void main()
