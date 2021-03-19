@@ -80,7 +80,7 @@ private:
 
 	const unsigned int				NR_DIR_LIGHTS = 500;
 
-	const unsigned int				NR_GEOMS = 500;
+	const unsigned int				NR_GEOMS = 100;
 
 	const unsigned int				NR_POINT_LIGHTS = 1;
 
@@ -264,8 +264,8 @@ void LightStudiesApp::draw()
 
 	gl::ScopedColor color(Color(1.0f, 1.0f, 1.0f));
 	for (auto &pl : mPointLights) {
-		pl.passPositionUf(mMPhongShader);
-		//pl.draw();
+		//pl.passPositionUf(mMPhongShader);
+		pl.draw();
 	}
 
 
