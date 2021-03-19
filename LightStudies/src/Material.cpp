@@ -1,4 +1,4 @@
-#include "Material.h";
+#include "Material.h"
 
 #include <iostream>  
 #include <string>  

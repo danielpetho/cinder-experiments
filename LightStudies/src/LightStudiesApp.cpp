@@ -94,11 +94,11 @@ private:
 void LightStudiesApp::setup()
 {
 	mOffScreenFbo = gl::Fbo::create(mWidth * mScale, mHeight * mScale);
-	mOffScreenFbo->bindFramebuffer();
+	//mOffScreenFbo->bindFramebuffer();
 	createGrid(mGridSize);
 
 	mCam.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 10000.0f);
-	mCam.lookAt(vec3(0, 20, 20), vec3(0));
+	mCam.lookAt(vec3(0, 20, 1500), vec3(0));
 	mCamUi = CameraUi(&mCam);
 
 
@@ -235,55 +235,63 @@ void LightStudiesApp::update()
 
 void LightStudiesApp::draw()
 {
-	gl::clear(Color(0.0f, 0.0f, 0.0f));
-	gl::ScopedViewport viewport(vec2(0), mOffScreenFbo->getSize());
-	//mCam.setEyePoint(vec3(mCam.getEyePoint().x, mCam.getEyePoint().y, mCam.getEyePoint().z + mCurrentFrame * 0.01));
-
-	gl::setMatrices(mCam);
-
-	//gl::multModelMatrix(mSceneRotation);
-
-	mMPhongShader->uniform("uViewPos", mCam.getEyePoint());
-	/*mPhongShader->uniform("uLightPos", vec3(0.1f));
-	mPhongShader->uniform("uLightColor", vec3(1.0f));
-	mPhongShader->uniform("uAmbientStrength", 0.9f);
-	mPhongShader->uniform("uSpecularStrength", 0.3f);
-	mPhongShader->uniform("uMaterialShininess", 32.0f);*/
-
-	/*for (auto &dl : mDirLights) {
-		dl.draw();
-	}*/
-
-	
-	for (auto &geom : mGeoms) {
-		gl::pushModelMatrix();
-		gl::translate(geom.second);
-		geom.first->draw();
-		gl::popModelMatrix();
-	}
-
-	gl::ScopedColor color(Color(1.0f, 1.0f, 1.0f));
-	for (auto &pl : mPointLights) {
-		//pl.passPositionUf(mMPhongShader);
-		pl.draw();
-	}
-
-
-	//gl::ScopedFaceCulling cullScope(true, GL_BACK);
-	//mHandObjRef->draw();
-
-	//gl::cullFace(GL_BACK);
-
-	// SHOW UTILITY GRID
-	if (mShowGrid && mGrid)
 	{
-		gl::ScopedColor colorScope(Color(1, 1, 1));
-		gl::ScopedGlslProg scopedGlslProg(gl::context()->getStockShader(gl::ShaderDef().color()));
+		gl::ScopedFramebuffer scpFbo(mOffScreenFbo);
 
-		mGrid->draw();
+		gl::clear(Color(0.0f, 0.0f, 0.0f));
+		gl::ScopedViewport viewport(vec2(0), mOffScreenFbo->getSize());
+		//mCam.setEyePoint(vec3(mCam.getEyePoint().x, mCam.getEyePoint().y, mCam.getEyePoint().z + mCurrentFrame * 0.01));
 
-		gl::drawCoordinateFrame(2);
+		gl::setMatrices(mCam);
+
+		//gl::multModelMatrix(mSceneRotation);
+
+		mMPhongShader->uniform("uViewPos", mCam.getEyePoint());
+		/*mPhongShader->uniform("uLightPos", vec3(0.1f));
+		  mPhongShader->uniform("uLightColor", vec3(1.0f));
+		  mPhongShader->uniform("uAmbientStrength", 0.9f);
+		  mPhongShader->uniform("uSpecularStrength", 0.3f);
+		  mPhongShader->uniform("uMaterialShininess", 32.0f);*/
+
+		/*for (auto &dl : mDirLights) {
+		  dl.draw();
+		  }*/
+
+
+		for (auto &geom : mGeoms) {
+			gl::pushModelMatrix();
+			gl::translate(geom.second);
+			geom.first->draw();
+			gl::popModelMatrix();
+		}
+
+		gl::ScopedColor color(Color(1.0f, 1.0f, 1.0f));
+		for (auto &pl : mPointLights) {
+			//pl.passPositionUf(mMPhongShader);
+			pl.draw();
+		}
+
+
+		//gl::ScopedFaceCulling cullScope(true, GL_BACK);
+		//mHandObjRef->draw();
+
+		//gl::cullFace(GL_BACK);
+
+		// SHOW UTILITY GRID
+		if (mShowGrid && mGrid)
+		{
+			gl::ScopedColor colorScope(Color(1, 1, 1));
+			gl::ScopedGlslProg scopedGlslProg(gl::context()->getStockShader(gl::ShaderDef().color()));
+
+			mGrid->draw();
+
+			gl::drawCoordinateFrame(2);
+		}
 	}
+
+	gl::ScopedViewport scpViewport(getWindowSize());
+	gl::setMatricesWindow(getWindowSize());
+	gl::clear();
 
 	// RENDERING
 	if (mRender && mRenderedFrame < mEndFrame)
@@ -297,7 +305,8 @@ void LightStudiesApp::draw()
 	// SHOW SCREEN OR NOT
 	if (mShowScreen)
 	{
-		mOffScreenFbo->blitToScreen(mOffScreenFbo->getBounds(), getWindowBounds());
+		//mOffScreenFbo->blitToScreen(mOffScreenFbo->getBounds(), getWindowBounds());
+		gl::draw(mOffScreenFbo->getColorTexture(), getWindowBounds());
 	}
 
 	mCurrentFrame++;
