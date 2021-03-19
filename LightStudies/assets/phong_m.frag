@@ -85,7 +85,8 @@ void main() {
     // == =====================================================
     // phase 1: directional lighting
 
-	vec3 result;// = CalcDirLight(dirLights[0], norm, viewDir);
+	// initialize output color!
+	vec3 result = vec3(0.0); // = CalcDirLight(dirLights[0], norm, viewDir);
 	/*for(int i = 0; i < NR_DIR_LIGHTS; i++)
         result += CalcDirLight(dirLights[i], norm, viewDir);    */
     
@@ -136,7 +137,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
-
+	// FIXME: attenuation values or calculation are off?
+	attenuation *= 10000.0;
 
     // combine results
 
